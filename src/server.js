@@ -4,7 +4,7 @@ const migrationsRun = require("./database/sqlite/migrations");
 const AppError = require("./utils/AppError");
 const express = require("express"),
     app = express(),
-    PORT = 3000;
+    PORT = 3333;
 
 const routes = require("./routes");
 migrationsRun();
@@ -26,10 +26,6 @@ app.use((error, req, res, next) => {
         status: "error",
         message: "Internal server error",
     });
-});
-
-app.get("/message/:id", (req, res) => {
-    res.send(`Id da mensagem: ${req.params.id}`);
 });
 
 app.listen(PORT, () => {
