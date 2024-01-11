@@ -9,3 +9,5 @@ class TagsController {
         return res.json(tags);
     }
 }
+
+module.exports = TagsController;
