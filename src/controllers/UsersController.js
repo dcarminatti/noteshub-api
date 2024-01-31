@@ -1,74 +1,74 @@
 const AppError = require("../utils/AppError"),
-    sqliteConnection = require("../database/sqlite"),
-    { hash, compare } = require("bcryptjs");
+  sqliteConnection = require("../database/sqlite"),
+  { hash, compare } = require("bcryptjs");
 
 class UsersController {
-    async create(req, res) {
-        const { name, email, password } = req.body,
-            database = await sqliteConnection();
+  async create(req, res) {
+    const { name, email, password } = req.body,
+      database = await sqliteConnection();
 
-        const checkUserExist = await database.get(
-            "SELECT * FROM users WHERE email = (?)",
-            [email]
-        );
+    const checkUserExist = await database.get(
+      "SELECT * FROM users WHERE email = (?)",
+      [email]
+    );
 
-        if (checkUserExist) {
-            throw new AppError("Este email já está em uso.");
-        }
-
-        const hashedPassword = await hash(password, 8);
-
-        await database.run(
-            "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
-            [name, email, hashedPassword]
-        );
-
-        return res.status(201).json({});
+    if (checkUserExist) {
+      throw new AppError("Este email já está em uso.");
     }
 
-    async update(req, res) {
-        const { name, email, password, old_password } = req.body,
-            { id } = req.params;
+    const hashedPassword = await hash(password, 8);
 
-        const database = await sqliteConnection(),
-            user = await database.get("SELECT * FROM users WHERE id = (?)", [
-                id,
-            ]);
+    await database.run(
+      "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
+      [name, email, hashedPassword]
+    );
 
-        if (!user) {
-            throw new AppError("Usuário não encontrado.");
-        }
+    return res.status(201).json({});
+  }
 
-        const userWithUpdatedEmail = await database.get(
-            "SELECT * FROM users WHERE email = (?)",
-            [email]
-        );
+  async update(req, res) {
+    const { name, email, password, old_password } = req.body,
+      user_id = req.user.id;
 
-        if (userWithUpdatedEmail && userWithUpdatedEmail.id !== user.id) {
-            throw new AppError("Este email já está em uso!");
-        }
+    const database = await sqliteConnection(),
+      user = await database.get("SELECT * FROM users WHERE id = (?)", [
+        user_id,
+      ]);
 
-        user.name = name ? name : user.name;
-        user.email = email ? email : user.email;
+    if (!user) {
+      throw new AppError("Usuário não encontrado.");
+    }
 
-        if (password && !old_password) {
-            throw new AppError(
-                "Você precisa informar a senha antiga para definir uma nova senha."
-            );
-        }
+    const userWithUpdatedEmail = await database.get(
+      "SELECT * FROM users WHERE email = (?)",
+      [email]
+    );
 
-        if (password && old_password) {
-            const checkOldPassword = await compare(old_password, user.password);
+    if (userWithUpdatedEmail && userWithUpdatedEmail.id !== user.id) {
+      throw new AppError("Este email já está em uso!");
+    }
 
-            if (!checkOldPassword) {
-                throw new AppError("A senha antiga não confere.");
-            }
+    user.name = name ? name : user.name;
+    user.email = email ? email : user.email;
 
-            user.password = await hash(password, 8);
-        }
+    if (password && !old_password) {
+      throw new AppError(
+        "Você precisa informar a senha antiga para definir uma nova senha."
+      );
+    }
 
-        await database.run(
-            `
+    if (password && old_password) {
+      const checkOldPassword = await compare(old_password, user.password);
+
+      if (!checkOldPassword) {
+        throw new AppError("A senha antiga não confere.");
+      }
+
+      user.password = await hash(password, 8);
+    }
+
+    await database.run(
+      `
             UPDATE users SET
             name = (?),
             email = (?),
@@ -76,11 +76,11 @@ class UsersController {
             updated_at = DATETIME('now')
             WHERE id = (?)
         `,
-            [user.name, user.email, user.password, id]
-        );
+      [user.name, user.email, user.password, user_id]
+    );
 
-        return res.json();
-    }
+    return res.json();
+  }
 }
 
 module.exports = UsersController;
